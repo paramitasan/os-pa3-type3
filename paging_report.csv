@@ -1,0 +1,9 @@
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r7-reuse.txt,SECOND CHANCE,1,15,15,15,1.0000,,
+r7-reuse.txt,SECOND CHANCE,2,9,9,15,0.6000,,
+r7-reuse.txt,SECOND CHANCE,3,9,9,15,0.6000,,
+r7-reuse.txt,SECOND CHANCE,4,6,6,15,0.4000,,
+r7-reuse.txt,SECOND CHANCE,5,5,5,15,0.3333,,
+r7-reuse.txt,SECOND CHANCE,6,5,5,15,0.3333,,
+r7-reuse.txt,SECOND CHANCE,7,5,5,15,0.3333,,
+r7-reuse.txt,SECOND CHANCE,4,6,6,15,0.4000,2,0

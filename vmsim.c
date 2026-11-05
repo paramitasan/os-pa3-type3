@@ -21,7 +21,7 @@
 #include "vmlib.h"
 
 /* Put your algorithm's name here. It appears in every heading. */
-const char *ALGORITHM_NAME = "FIFO (the given worked example)";
+const char *ALGORITHM_NAME = "SECOND CHANCE";
 
 /* ===================================================================== */
 /*  THE WORKED EXAMPLE: FIFO                                              */
@@ -80,10 +80,47 @@ static int fifo_victim(VmSim *sim)
  * Every answer in the key is computed that way, so a different tie-break will
  * not match and you will not be able to reproduce your own results.
  */
+
+ /* ALGORITHM EXPLANATION: 
+    1. loop forever
+    2. if the frame the hand is on has ref_bit == 0, the sim hand will be recorded inside victim 
+    3. advance the sim hand using the given formula: sim->hand = (sim->hand + 1) % sim->nframes 
+    4. return the victim
+    5. else condition where the frame the hand is on has ref_bit == 1, clear that frame's ref bit
+    6. then advance the hand using the given formula: sim->hand = (sim->hand + 1) % sim->nframes 
+*/
+
+/* attributes for print extra output purposes */
+static int hand_from[MAX_REFS];
+static int chances_at[MAX_REFS];
 int choose_victim(VmSim *sim)
-{
-    /* TODO: replace this line with your own algorithm. */
-    return fifo_victim(sim);
+{   
+    int starting_hand = sim->hand;
+    int chances = 0;
+
+    while (1) {
+        if (sim->frame[sim->hand].ref_bit == 0) {
+            int victim = sim->hand;
+            sim->hand = (sim->hand + 1) % sim->nframes;
+
+            /* (for print extra output purposes)
+            more codes to record the eviction's starting hand and second chances granted
+            by using the current reference index (sim->t) as the array slot. */
+            if (sim->recording) {
+                hand_from[sim->t] = starting_hand;
+                chances_at[sim->t] = chances;
+            }
+
+            return victim;
+        } else {
+            sim->frame[sim->hand].ref_bit = 0;
+            sim->hand = (sim->hand + 1) % sim->nframes;
+            
+            /* (for print extra output purposes)
+            since second chances is granted, therefore chances + 1 */
+            chances++;
+        }
+    }
 }
 
 /* ===================================================================== */
@@ -102,9 +139,42 @@ int choose_victim(VmSim *sim)
  * happens, print it before the sweep, or guard the collecting with
  * sim->recording, which the library sets to 0 for those extra runs.
  */
+static void rule(char c)
+{
+    for (int i = 0; i < 59; i++) putchar(c);
+    putchar('\n');
+}
 void print_topic_extra(VmSim *sim)
 {
-    /* TODO: your topic's own extra output goes here. */
+    int total_chances = 0;
+
+    rule('=');
+    printf("SECOND CHANCES GRANTED, AND WHERE THE HAND WAS\n");
+    rule('=');
+    printf("'chances' is how many frames the hand passed over at this\n"
+           "eviction because their reference bit was set. Each one had\n"
+           "its reference bit cleared and survived the round.\n");
+    rule('-');
+    printf("%-6s %-10s %-12s %-10s %-12s\n",
+           "t", "page in", "hand from", "chances", "victim frame");
+    rule('-');
+
+    /* loop through every request index */
+    for (int t = 0; t < sim->nrefs; t++) {
+        /* hits and faults using an empty frame are not evictions. */
+        if (sim->victim_at[t] == -1) continue;
+
+        printf("%-6d %-10d f%-11d %-10d f%d\n",
+               t, sim->ref[t], hand_from[t], chances_at[t],
+               sim->victim_at[t]);
+        total_chances += chances_at[t];
+    }
+
+    rule('-');
+    printf("Evictions              : %d\n", sim->evictions);
+    printf("Second chances granted : %d\n", total_chances);
+    printf("Hand ends at           : f%d\n", sim->hand);
+    putchar('\n');
 
     print_vs_fifo(sim, ALGORITHM_NAME);
     print_frame_sweep(sim, ALGORITHM_NAME);
