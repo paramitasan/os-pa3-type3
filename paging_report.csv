@@ -1,4 +1,76 @@
 refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r1-lecture.txt,SECOND CHANCE,1,22,22,22,1.0000,,
+r1-lecture.txt,SECOND CHANCE,2,15,15,22,0.6818,,
+r1-lecture.txt,SECOND CHANCE,3,14,15,22,0.6364,,
+r1-lecture.txt,SECOND CHANCE,4,9,10,22,0.4091,,
+r1-lecture.txt,SECOND CHANCE,5,9,9,22,0.4091,,
+r1-lecture.txt,SECOND CHANCE,6,6,6,22,0.2727,,
+r1-lecture.txt,SECOND CHANCE,7,6,6,22,0.2727,,
+r1-lecture.txt,SECOND CHANCE,3,14,15,22,0.6364,11,0
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r2-belady.txt,SECOND CHANCE,1,12,12,12,1.0000,,
+r2-belady.txt,SECOND CHANCE,2,12,12,12,1.0000,,
+r2-belady.txt,SECOND CHANCE,3,9,9,12,0.7500,,
+r2-belady.txt,SECOND CHANCE,4,10,10,12,0.8333,,
+r2-belady.txt,SECOND CHANCE,5,5,5,12,0.4167,,
+r2-belady.txt,SECOND CHANCE,6,5,5,12,0.4167,,
+r2-belady.txt,SECOND CHANCE,7,5,5,12,0.4167,,
+r2-belady.txt,SECOND CHANCE,3,9,9,12,0.7500,6,0
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r3.txt,SECOND CHANCE,1,13,13,13,1.0000,,
+r3.txt,SECOND CHANCE,2,11,11,13,0.8462,,
+r3.txt,SECOND CHANCE,3,9,10,13,0.6923,,
+r3.txt,SECOND CHANCE,4,6,7,13,0.4615,,
+r3.txt,SECOND CHANCE,5,6,6,13,0.4615,,
+r3.txt,SECOND CHANCE,6,6,6,13,0.4615,,
+r3.txt,SECOND CHANCE,7,6,6,13,0.4615,,
+r3.txt,SECOND CHANCE,3,9,10,13,0.6923,6,2
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r4.txt,SECOND CHANCE,1,14,14,14,1.0000,,
+r4.txt,SECOND CHANCE,2,13,13,14,0.9286,,
+r4.txt,SECOND CHANCE,3,11,11,14,0.7857,,
+r4.txt,SECOND CHANCE,4,10,11,14,0.7143,,
+r4.txt,SECOND CHANCE,5,10,10,14,0.7143,,
+r4.txt,SECOND CHANCE,6,7,7,14,0.5000,,
+r4.txt,SECOND CHANCE,7,7,7,14,0.5000,,
+r4.txt,SECOND CHANCE,3,11,11,14,0.7857,8,3
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r5.txt,SECOND CHANCE,1,13,13,13,1.0000,,
+r5.txt,SECOND CHANCE,2,13,13,13,1.0000,,
+r5.txt,SECOND CHANCE,3,12,12,13,0.9231,,
+r5.txt,SECOND CHANCE,4,10,10,13,0.7692,,
+r5.txt,SECOND CHANCE,5,10,10,13,0.7692,,
+r5.txt,SECOND CHANCE,6,9,9,13,0.6923,,
+r5.txt,SECOND CHANCE,7,7,7,13,0.5385,,
+r5.txt,SECOND CHANCE,3,12,12,13,0.9231,9,2
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r6.txt,SECOND CHANCE,1,15,15,15,1.0000,,
+r6.txt,SECOND CHANCE,2,15,15,15,1.0000,,
+r6.txt,SECOND CHANCE,3,15,15,15,1.0000,,
+r6.txt,SECOND CHANCE,4,10,9,15,0.6667,,
+r6.txt,SECOND CHANCE,5,6,6,15,0.4000,,
+r6.txt,SECOND CHANCE,6,6,6,15,0.4000,,
+r6.txt,SECOND CHANCE,7,6,6,15,0.4000,,
+r6.txt,SECOND CHANCE,3,15,15,15,1.0000,12,3
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
 r7-reuse.txt,SECOND CHANCE,1,15,15,15,1.0000,,
 r7-reuse.txt,SECOND CHANCE,2,9,9,15,0.6000,,
 r7-reuse.txt,SECOND CHANCE,3,9,9,15,0.6000,,
@@ -7,3 +79,15 @@ r7-reuse.txt,SECOND CHANCE,5,5,5,15,0.3333,,
 r7-reuse.txt,SECOND CHANCE,6,5,5,15,0.3333,,
 r7-reuse.txt,SECOND CHANCE,7,5,5,15,0.3333,,
 r7-reuse.txt,SECOND CHANCE,4,6,6,15,0.4000,2,0
+
+
+
+refstring,algorithm,frames,faults,fifo_faults,references,fault_rate,evictions,writebacks
+r1-lecture.txt,SECOND CHANCE,1,22,22,22,1.0000,,
+r1-lecture.txt,SECOND CHANCE,2,15,15,22,0.6818,,
+r1-lecture.txt,SECOND CHANCE,3,14,15,22,0.6364,,
+r1-lecture.txt,SECOND CHANCE,4,9,10,22,0.4091,,
+r1-lecture.txt,SECOND CHANCE,5,9,9,22,0.4091,,
+r1-lecture.txt,SECOND CHANCE,6,6,6,22,0.2727,,
+r1-lecture.txt,SECOND CHANCE,7,6,6,22,0.2727,,
+r1-lecture.txt,SECOND CHANCE,3,14,15,22,0.6364,11,0

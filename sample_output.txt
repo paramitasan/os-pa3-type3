@@ -1,0 +1,1040 @@
+~/os-pa3-type3$ ./memlab
+============================================================
+  memlab: real memory, measured
+============================================================
+    page size                          4096 bytes
+    sizeof(int)                        4 bytes
+    VmRSS at start                     1756 KiB
+
+  malloc / free
+  ------------------------------------------------------------
+    requested                          4000000 bytes (3.81 MiB)
+    VmRSS before we asked                 1884 KiB
+    first byte                 0x72e2b262f010   page    0x72e2b262f   offset    16
+    last byte                  0x72e2b29ff90f   page    0x72e2b29ff   offset  2319
+    rounded up to                      977 pages = 4001792 bytes
+    internal fragmentation             1792 bytes wasted in the last page
+    after asking for the memory        VmRSS =    1888 KiB   (+4 KiB)
+      ^ barely moved. The address space exists, but almost no
+        physical frame has been allocated yet. That is DEMAND
+        PAGING: the pages are marked invalid in the page table
+        and will be faulted in one at a time when touched.
+    after writing every element        VmRSS =    5792 KiB   (+3908 KiB)
+      ^ THERE is the physical memory. One page fault per page,
+        about 977 of them, each one handled by the sequence on
+        lecture slide 40.
+    first 10 values                     0 1 2 3 4 5 6 7 8 9 
+    after free()                       VmRSS =    1884 KiB   (-3908 KiB)
+
+  mmap / munmap  (MAP_ANONYMOUS | MAP_PRIVATE)
+  ------------------------------------------------------------
+    requested                          4000000 bytes (3.81 MiB)
+    VmRSS before we asked                 1884 KiB
+    first byte                 0x72e2b262f000   page    0x72e2b262f   offset     0
+    last byte                  0x72e2b29ff8ff   page    0x72e2b29ff   offset  2303
+    rounded up to                      977 pages = 4001792 bytes
+    internal fragmentation             1792 bytes wasted in the last page
+    after asking for the memory        VmRSS =    1884 KiB   (+0 KiB)
+      ^ barely moved. The address space exists, but almost no
+        physical frame has been allocated yet. That is DEMAND
+        PAGING: the pages are marked invalid in the page table
+        and will be faulted in one at a time when touched.
+    after writing every element        VmRSS =    5792 KiB   (+3908 KiB)
+      ^ THERE is the physical memory. One page fault per page,
+        about 977 of them, each one handled by the sequence on
+        lecture slide 40.
+    first 10 values                     0 1 2 3 4 5 6 7 8 9 
+    after munmap()                     VmRSS =    1884 KiB   (-3908 KiB)
+
+============================================================
+  Now compare the two binaries:   make sizes
+  One is statically linked and one is dynamically linked.
+  Lecture slide 31 explains the difference.
+============================================================
+
+
+
+mita@os262:~/os-pa3-type3$ make sizes
+=== static against dynamic linking (lecture slide 31) ===
+-rwxrwxr-x 1 mita mita  17K Nov  5 17:23 memlab
+-rwxrwxr-x 1 mita mita 976K Nov  5 17:23 memlab-static
+
+--- shared libraries the DYNAMIC build needs at run time ---
+        linux-vdso.so.1 (0x000070c47f696000)
+        libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6 (0x000070c47f400000)
+        /lib64/ld-linux-x86-64.so.2 (0x000070c47f698000)
+
+--- and the STATIC build ---
+                not a dynamic executable
+        (nothing, or 'not a dynamic executable': the C library is
+         already inside the binary, which is why it is so much bigger)
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r1-lecture.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r1-lecture.txt  (22 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  7   0   1   2   0   3   0   4   2   3   0 
+         --------------------------------------------
+  f0    :   7   7   7   2   2   2   2   4   4   4   4
+  f1    :   .   0   0   0   0   0   0   0   2   2   2
+  f2    :   .   .   1   1   1   3   3   3   3   3   0
+         --------------------------------------------
+  fault :   F   F   F   F   .   F   .   F   F   .   F
+
+  t     :  11  12  13  14  15  16  17  18  19  20  21
+  ref   :  3   0   3   2   1   2   0   1   7   0   1 
+         --------------------------------------------
+  f0    :   3   3   3   3   3   3   0   0   0   0   0
+  f1    :   2   2   2   2   1   1   1   1   7   7   7
+  f2    :   0   0   0   0   0   2   2   2   2   2   1
+         --------------------------------------------
+  fault :   F   .   .   .   F   F   F   .   F   .   F
+
+Physical memory as it stands at t=21
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      0       17         20      2     1       0   01001000
+      1      7       19         19      1     1       0   00100000
+      2      1       21         21      1     1       0   10000000
+
+-----------------------------------------------------------
+  References        : 22
+  Page faults       : 14
+  Hits              : 8
+  Fault rate        : 0.6364  (63.64%)
+  Hit rate          : 0.3636  (36.36%)
+  Evictions         : 11
+  Dirty write-backs : 0   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 14 / 22 = 0.6364
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.3636 x 100 + 0.6364 x 8000000
+      = 5090945.5 ns
+  Slowdown vs no paging at all : 50909.5 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      2          f0           3          f0
+5      3          f1           1          f2
+7      4          f0           3          f0
+8      2          f1           0          f1
+10     0          f2           3          f2
+11     3          f0           0          f0
+15     1          f1           3          f1
+16     2          f2           0          f2
+17     0          f0           0          f0
+19     7          f1           3          f1
+21     1          f2           0          f2
+-----------------------------------------------------------
+Evictions              : 11
+Second chances granted : 16
+Hand ends at           : f0
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r1-lecture.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    15         14         -1     -6.7%
+  fault rate                 0.6818     0.6364    -0.0455         
+-----------------------------------------------------------
+  Your algorithm took 1 FEWER faults than FIFO here.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r1-lecture.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               22             22            +0
+  2               15             15            +0
+  3               15             14            -1
+  4               10              9            -1
+  5                9              9            +0
+  6                6              6            +0
+  7                6              6            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r2-belady.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r2-belady.txt  (12 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  1   2   3   4   1   2   5   1   2   3   4 
+         --------------------------------------------
+  f0    :   1   1   1   4   4   4   5   5   5   5   5
+  f1    :   .   2   2   2   1   1   1   1   1   3   3
+  f2    :   .   .   3   3   3   2   2   2   2   2   4
+         --------------------------------------------
+  fault :   F   F   F   F   F   F   F   .   .   F   F
+
+  t     :  11
+  ref   :  5 
+         ----
+  f0    :   5
+  f1    :   3
+  f2    :   4
+         ----
+  fault :   .
+
+Physical memory as it stands at t=11
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      5        6         11      2     1       0   10000100
+      1      3        9          9      1     1       0   00100000
+      2      4       10         10      1     1       0   01000000
+
+-----------------------------------------------------------
+  References        : 12
+  Page faults       : 9
+  Hits              : 3
+  Fault rate        : 0.7500  (75.00%)
+  Hit rate          : 0.2500  (25.00%)
+  Evictions         : 6
+  Dirty write-backs : 0   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 9 / 12 = 0.7500
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.2500 x 100 + 0.7500 x 8000000
+      = 6000025.0 ns
+  Slowdown vs no paging at all : 60000.2 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      4          f0           3          f0
+4      1          f1           0          f1
+5      2          f2           0          f2
+6      5          f0           3          f0
+9      3          f1           3          f1
+10     4          f2           0          f2
+-----------------------------------------------------------
+Evictions              : 6
+Second chances granted : 9
+Hand ends at           : f0
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r2-belady.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                     9          9         +0      0.0%
+  fault rate                 0.7500     0.7500    +0.0000         
+-----------------------------------------------------------
+  Your algorithm tied with FIFO here. Explain why nothing in
+  this reference string lets the two algorithms differ.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r2-belady.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               12             12            +0
+  2               12             12            +0
+  3                9              9            +0
+  4               10*            10*           +0
+  5                5              5            +0
+  6                5              5            +0
+  7                5              5            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : ANOMALOUS, more frames cost more faults
+  Your algorithm on this string  : ANOMALOUS, more frames cost more faults
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r3.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r3.txt  (13 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  7   0w  1   2   0   3w  0   4   2w  3   0 
+         --------------------------------------------
+  f0    :   7   7   7   2   2   2   2   4   4   4   4
+  f1    :   .   0   0   0   0   0   0   0   2   2   2
+  f2    :   .   .   1   1   1   3   3   3   3   3   0
+         --------------------------------------------
+  fault :   F   F   F   F   .   F   .   F   F   .   F
+
+  t     :  11  12
+  ref   :  3   2 
+         --------
+  f0    :   3   3
+  f1    :   2   2
+  f2    :   0   0
+         --------
+  fault :   F   .
+
+Physical memory as it stands at t=12
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      3       11         11      1     1       0   01000000
+      1      2        8         12      2     1       1   10001000
+      2      0       10         10      1     1       0   00100000
+
+-----------------------------------------------------------
+  References        : 13
+  Page faults       : 9
+  Hits              : 4
+  Fault rate        : 0.6923  (69.23%)
+  Hit rate          : 0.3077  (30.77%)
+  Evictions         : 6
+  Dirty write-backs : 2   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 9 / 13 = 0.6923
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.3077 x 100 + 0.6923 x 8000000
+      = 5538492.3 ns
+  Slowdown vs no paging at all : 55384.9 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      2          f0           3          f0
+5      3          f1           1          f2
+7      4          f0           3          f0
+8      2          f1           0          f1
+10     0          f2           3          f2
+11     3          f0           0          f0
+-----------------------------------------------------------
+Evictions              : 6
+Second chances granted : 10
+Hand ends at           : f1
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r3.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    10          9         -1    -10.0%
+  fault rate                 0.7692     0.6923    -0.0769         
+-----------------------------------------------------------
+  Your algorithm took 1 FEWER faults than FIFO here.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r3.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               13             13            +0
+  2               11             11            +0
+  3               10              9            -1
+  4                7              6            -1
+  5                6              6            +0
+  6                6              6            +0
+  7                6              6            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r4.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r4.txt  (14 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  4   2w  0   2   6   1w  0   5   4   1   0w
+         --------------------------------------------
+  f0    :   4   4   4   4   6   6   6   6   4   4   4
+  f1    :   .   2   2   2   2   1   1   1   1   1   0
+  f2    :   .   .   0   0   0   0   0   5   5   5   5
+         --------------------------------------------
+  fault :   F   F   F   .   F   F   .   F   F   .   F
+
+  t     :  11  12  13
+  ref   :  2   3   6 
+         ------------
+  f0    :   4   3   3
+  f1    :   0   0   6
+  f2    :   2   2   2
+         ------------
+  fault :   F   F   F
+
+Physical memory as it stands at t=13
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      3       12         12      1     0       0   01000000
+      1      6       13         13      1     1       0   10000000
+      2      2       11         11      1     0       0   00100000
+
+-----------------------------------------------------------
+  References        : 14
+  Page faults       : 11
+  Hits              : 3
+  Fault rate        : 0.7857  (78.57%)
+  Hit rate          : 0.2143  (21.43%)
+  Evictions         : 8
+  Dirty write-backs : 3   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 11 / 14 = 0.7857
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.2143 x 100 + 0.7857 x 8000000
+      = 6285735.7 ns
+  Slowdown vs no paging at all : 62857.4 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+4      6          f0           3          f0
+5      1          f1           0          f1
+7      5          f2           3          f2
+8      4          f0           0          f0
+10     0          f1           3          f1
+11     2          f2           0          f2
+12     3          f0           0          f0
+13     6          f1           3          f1
+-----------------------------------------------------------
+Evictions              : 8
+Second chances granted : 12
+Hand ends at           : f2
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r4.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    11         11         +0      0.0%
+  fault rate                 0.7857     0.7857    +0.0000         
+-----------------------------------------------------------
+  Your algorithm tied with FIFO here. Explain why nothing in
+  this reference string lets the two algorithms differ.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r4.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               14             14            +0
+  2               13             13            +0
+  3               11             11            +0
+  4               11             10            -1
+  5               10             10            +0
+  6                7              7            +0
+  7                7              7            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r5.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r5.txt  (13 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  3   2   1w  0   3   4   5w  3   2   1   6 
+         --------------------------------------------
+  f0    :   3   3   3   0   0   0   5   5   5   5   6
+  f1    :   .   2   2   2   3   3   3   3   3   1   1
+  f2    :   .   .   1   1   1   4   4   4   2   2   2
+         --------------------------------------------
+  fault :   F   F   F   F   F   F   F   .   F   F   F
+
+  t     :  11  12
+  ref   :  3w  2 
+         --------
+  f0    :   6   6
+  f1    :   1   2
+  f2    :   3   3
+         --------
+  fault :   F   F
+
+Physical memory as it stands at t=12
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      6       10         10      1     0       0   00100000
+      1      2       12         12      1     1       0   10000000
+      2      3       11         11      1     1       1   01000000
+
+-----------------------------------------------------------
+  References        : 13
+  Page faults       : 12
+  Hits              : 1
+  Fault rate        : 0.9231  (92.31%)
+  Hit rate          : 0.0769  (7.69%)
+  Evictions         : 9
+  Dirty write-backs : 2   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 12 / 13 = 0.9231
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.0769 x 100 + 0.9231 x 8000000
+      = 7384623.1 ns
+  Slowdown vs no paging at all : 73846.2 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      0          f0           3          f0
+4      3          f1           0          f1
+5      4          f2           0          f2
+6      5          f0           3          f0
+8      2          f1           1          f2
+9      1          f0           1          f1
+10     6          f2           1          f0
+11     3          f1           1          f2
+12     2          f0           1          f1
+-----------------------------------------------------------
+Evictions              : 9
+Second chances granted : 11
+Hand ends at           : f2
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r5.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    12         12         +0      0.0%
+  fault rate                 0.9231     0.9231    +0.0000         
+-----------------------------------------------------------
+  Your algorithm tied with FIFO here. Explain why nothing in
+  this reference string lets the two algorithms differ.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r5.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               13             13            +0
+  2               13             13            +0
+  3               12             12            +0
+  4               10             10            +0
+  5               10             10            +0
+  6                9              9            +0
+  7                7              7            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r6.txt -f 3
+===========================================================
+  SECOND CHANCE
+  reference string : r6.txt  (15 references)
+  page frames      : 3
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  2   5w  3   1   2   4   5   3w  2   1   4 
+         --------------------------------------------
+  f0    :   2   2   2   1   1   1   5   5   5   1   1
+  f1    :   .   5   5   5   2   2   2   3   3   3   4
+  f2    :   .   .   3   3   3   4   4   4   2   2   2
+         --------------------------------------------
+  fault :   F   F   F   F   F   F   F   F   F   F   F
+
+  t     :  11  12  13  14
+  ref   :  5w  2   3   6 
+         ----------------
+  f0    :   1   2   2   2
+  f1    :   4   4   3   3
+  f2    :   5   5   5   6
+         ----------------
+  fault :   F   F   F   F
+
+Physical memory as it stands at t=14
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      2       12         12      1     1       0   00100000
+      1      3       13         13      1     1       0   01000000
+      2      6       14         14      1     1       0   10000000
+
+-----------------------------------------------------------
+  References        : 15
+  Page faults       : 15
+  Hits              : 0
+  Fault rate        : 1.0000  (100.00%)
+  Hit rate          : 0.0000  (0.00%)
+  Evictions         : 12
+  Dirty write-backs : 3   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 15 / 15 = 1.0000
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.0000 x 100 + 1.0000 x 8000000
+      = 8000000.0 ns
+  Slowdown vs no paging at all : 80000.0 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      1          f0           3          f0
+4      2          f1           0          f1
+5      4          f2           0          f2
+6      5          f0           3          f0
+7      3          f1           0          f1
+8      2          f2           0          f2
+9      1          f0           3          f0
+10     4          f1           0          f1
+11     5          f2           0          f2
+12     2          f0           3          f0
+13     3          f1           0          f1
+14     6          f2           0          f2
+-----------------------------------------------------------
+Evictions              : 12
+Second chances granted : 12
+Hand ends at           : f0
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r6.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    15         15         +0      0.0%
+  fault rate                 1.0000     1.0000    +0.0000         
+-----------------------------------------------------------
+  Your algorithm tied with FIFO here. Explain why nothing in
+  this reference string lets the two algorithms differ.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r6.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               15             15            +0
+  2               15             15            +0
+  3               15             15            +0
+  4                9             10            +1
+  5                6              6            +0
+  6                6              6            +0
+  7                6              6            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r7-reuse.txt -f 4
+===========================================================
+  SECOND CHANCE
+  reference string : r7-reuse.txt  (15 references)
+  page frames      : 4
+===========================================================
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  1   2   3   4   1   2   3   2   3   2   3 
+         --------------------------------------------
+  f0    :   1   1   1   1   1   1   1   1   1   1   1
+  f1    :   .   2   2   2   2   2   2   2   2   2   2
+  f2    :   .   .   3   3   3   3   3   3   3   3   3
+  f3    :   .   .   .   4   4   4   4   4   4   4   4
+         --------------------------------------------
+  fault :   F   F   F   F   .   .   .   .   .   .   .
+
+  t     :  11  12  13  14
+  ref   :  2   3   5   1 
+         ----------------
+  f0    :   1   1   5   5
+  f1    :   2   2   2   1
+  f2    :   3   3   3   3
+  f3    :   4   4   4   4
+         ----------------
+  fault :   .   .   F   F
+
+Physical memory as it stands at t=14
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      5       13         13      1     1       0   01000000
+      1      1       14         14      1     1       0   10000000
+      2      3        2         12      5     0       0   00101010
+      3      4        3          3      1     0       0   00000000
+
+-----------------------------------------------------------
+  References        : 15
+  Page faults       : 6
+  Hits              : 9
+  Fault rate        : 0.4000  (40.00%)
+  Hit rate          : 0.6000  (60.00%)
+  Evictions         : 2
+  Dirty write-backs : 0   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 6 / 15 = 0.4000
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.6000 x 100 + 0.4000 x 8000000
+      = 3200060.0 ns
+  Slowdown vs no paging at all : 32000.6 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+13     5          f0           4          f0
+14     1          f1           0          f1
+-----------------------------------------------------------
+Evictions              : 2
+Second chances granted : 4
+Hand ends at           : f2
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r7-reuse.txt, 4 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                     6          6         +0      0.0%
+  fault rate                 0.4000     0.4000    +0.0000         
+-----------------------------------------------------------
+  Your algorithm tied with FIFO here. Explain why nothing in
+  this reference string lets the two algorithms differ.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r7-reuse.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               15             15            +0
+  2                9              9            +0
+  3                9              9            +0
+  4                6              6            +0
+  5                5              5            +0
+  6                5              5            +0
+  7                5              5            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
+
+
+
+~/os-pa3-type3$ ./vmsim refs/r1-lecture.txt -v
+===========================================================
+  SECOND CHANCE
+  reference string : r1-lecture.txt  (22 references)
+  page frames      : 3
+===========================================================
+
+Trace of every reference
+
+  t=0   page 7   read   FAULT, free frame 0
+  t=1   page 0   read   FAULT, free frame 1
+  t=2   page 1   read   FAULT, free frame 2
+  t=3   page 2   read   FAULT, evict page 7 from frame 0
+  t=4   page 0   read   HIT  in frame 1
+  t=5   page 3   read   FAULT, evict page 1 from frame 2
+  t=6   page 0   read   HIT  in frame 1
+  t=7   page 4   read   FAULT, evict page 2 from frame 0
+  t=8   page 2   read   FAULT, evict page 0 from frame 1
+  t=9   page 3   read   HIT  in frame 2
+  t=10  page 0   read   FAULT, evict page 3 from frame 2
+  t=11  page 3   read   FAULT, evict page 4 from frame 0
+  t=12  page 0   read   HIT  in frame 2
+  t=13  page 3   read   HIT  in frame 0
+  t=14  page 2   read   HIT  in frame 1
+  t=15  page 1   read   FAULT, evict page 2 from frame 1
+  t=16  page 2   read   FAULT, evict page 0 from frame 2
+  t=17  page 0   read   FAULT, evict page 3 from frame 0
+  t=18  page 1   read   HIT  in frame 1
+  t=19  page 7   read   FAULT, evict page 1 from frame 1
+  t=20  page 0   read   HIT  in frame 0
+  t=21  page 1   read   FAULT, evict page 2 from frame 2
+
+Frame contents after every reference  (. = frame empty, F = page fault)
+
+  t     :   0   1   2   3   4   5   6   7   8   9  10
+  ref   :  7   0   1   2   0   3   0   4   2   3   0 
+         --------------------------------------------
+  f0    :   7   7   7   2   2   2   2   4   4   4   4
+  f1    :   .   0   0   0   0   0   0   0   2   2   2
+  f2    :   .   .   1   1   1   3   3   3   3   3   0
+         --------------------------------------------
+  fault :   F   F   F   F   .   F   .   F   F   .   F
+
+  t     :  11  12  13  14  15  16  17  18  19  20  21
+  ref   :  3   0   3   2   1   2   0   1   7   0   1 
+         --------------------------------------------
+  f0    :   3   3   3   3   3   3   0   0   0   0   0
+  f1    :   2   2   2   2   1   1   1   1   7   7   7
+  f2    :   0   0   0   0   0   2   2   2   2   2   1
+         --------------------------------------------
+  fault :   F   .   .   .   F   F   F   .   F   .   F
+
+Physical memory as it stands at t=21
+
+  frame   page   loaded   last use   uses   ref   dirty   age
+  ---------------------------------------------------------------
+      0      0       17         20      2     1       0   01001000
+      1      7       19         19      1     1       0   00100000
+      2      1       21         21      1     1       0   10000000
+
+-----------------------------------------------------------
+  References        : 22
+  Page faults       : 14
+  Hits              : 8
+  Fault rate        : 0.6364  (63.64%)
+  Hit rate          : 0.3636  (36.36%)
+  Evictions         : 11
+  Dirty write-backs : 0   (evicted pages that had to be saved)
+-----------------------------------------------------------
+
+-----------------------------------------------------------
+  EFFECTIVE ACCESS TIME   (memory 100 ns, fault service 8 ms)
+-----------------------------------------------------------
+  p (fault rate)    = 14 / 22 = 0.6364
+  EAT = (1 - p) x 100 ns + p x 8,000,000 ns
+      = 0.3636 x 100 + 0.6364 x 8000000
+      = 5090945.5 ns
+  Slowdown vs no paging at all : 50909.5 times
+
+  For EAT to stay under 110 ns, which is a 10% slowdown,
+  the fault rate would have to be below 0.00000125, or about 1 in 799990.
+-----------------------------------------------------------
+
+===========================================================
+SECOND CHANCES GRANTED, AND WHERE THE HAND WAS
+===========================================================
+'chances' is how many frames the hand passed over at this
+eviction because their reference bit was set. Each one had
+its reference bit cleared and survived the round.
+-----------------------------------------------------------
+t      page in    hand from    chances    victim frame
+-----------------------------------------------------------
+3      2          f0           3          f0
+5      3          f1           1          f2
+7      4          f0           3          f0
+8      2          f1           0          f1
+10     0          f2           3          f2
+11     3          f0           0          f0
+15     1          f1           3          f1
+16     2          f2           0          f2
+17     0          f0           0          f0
+19     7          f1           3          f1
+21     1          f2           0          f2
+-----------------------------------------------------------
+Evictions              : 11
+Second chances granted : 16
+Hand ends at           : f0
+
+===========================================================
+  SECOND CHANCE  vs  FIFO BASELINE
+  r1-lecture.txt, 3 frames
+===========================================================
+  metric                       FIFO      yours       diff    change
+-----------------------------------------------------------
+  page faults                    15         14         -1     -6.7%
+  fault rate                 0.6818     0.6364    -0.0455         
+-----------------------------------------------------------
+  Your algorithm took 1 FEWER faults than FIFO here.
+===========================================================
+
+===========================================================
+  FRAME SWEEP: does more memory always help?
+  r1-lecture.txt
+===========================================================
+  algorithm : SECOND CHANCE
+-----------------------------------------------------------
+  frames         FIFO          yours   difference
+-----------------------------------------------------------
+  1               22             22            +0
+  2               15             15            +0
+  3               15             14            -1
+  4               10              9            -1
+  5                9              9            +0
+  6                6              6            +0
+  7                6              6            +0
+-----------------------------------------------------------
+  * marks a frame count where ADDING a frame made things worse.
+    That is Belady's anomaly (lecture slide 46).
+
+  FIFO on this string            : no anomaly on this string
+  Your algorithm on this string  : no anomaly on this string
+===========================================================
